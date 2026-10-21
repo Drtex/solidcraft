@@ -19,6 +19,7 @@ pub mod browser;
 pub mod browser_canvas;
 pub mod browser_prompts;
 pub mod canvas;
+pub mod canvas_calibrate;
 pub mod cli_link;
 #[cfg(test)]
 mod colour_tokens_tests;
@@ -1112,6 +1113,7 @@ impl SolveApp {
                     self.applying = None;
                     self.editing_state = None;
                     self.pending_feature_edit = None;
+                    self.tree.calibration = None;
                     self.tool = None;
                     self.preview.reset();
                     self.cam = Camera::default();
