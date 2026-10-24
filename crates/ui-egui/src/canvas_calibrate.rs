@@ -121,9 +121,11 @@ pub fn show(app: &mut SolveApp, ui: &mut egui::Ui, painter: &egui::Painter, proj
     let Some(mid) = a.zip(b).map(|(a, b)| a.lerp(b, 0.5)) else { return };
     let id = egui::Id::new(BOX_ID);
     let mut enter = false;
-    crate::frame::area(egui::Id::new("sc_calibrate_area")).fixed_pos(mid + egui::vec2(8.0, 8.0)).order(egui::Order::Foreground).show(
-        ui.ctx(),
-        |ui| {
+    crate::ui_kit::Container::new(ui.ctx(), crate::ui_kit::Surface::Popup)
+        .area(egui::Id::new("sc_calibrate_area"))
+        .fixed_pos(mid + egui::vec2(8.0, 8.0))
+        .order(egui::Order::Foreground)
+        .show(ui.ctx(), |ui| {
             egui::Frame::popup(ui.style()).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(egui::RichText::new(tr_label("Distance")).color(t.text_dim).size(t.font_small));
@@ -140,8 +142,7 @@ pub fn show(app: &mut SolveApp, ui: &mut egui::Ui, painter: &egui::Painter, proj
                     }
                 });
             });
-        },
-    );
+        });
     app.tree.calibration = Some(cal);
     if enter {
         apply(app);
