@@ -19,7 +19,7 @@ CommandSpec::new("view.navigate", "Navigate View", navigate)
     .icon("orbit")
     .noundo()
     .doc_only()
-    .params("camera: Camera; direction?: [x,y,z] in the camera's up-axis frame; or action: left|right|up|down|clockwise|counterclockwise|home|fit, degrees?: 0..180 (how far left|right|up|down turn; default 90); or motion: pan|orbit|zoom, delta?: [dx,dy] (pixels, each ±10000), free_orbit?: bool (orbit through poles, default false), viewport?: [width,height] (1..1000000, required for pan or pivot), pivot?: [x,y,z], factor?: 0.05..20 (required for zoom), anchor?: [x,y,z] → camera, fit, continuous?"),
+    .params("camera: Camera; direction?: [x,y,z] in the camera's up-axis frame; or action: left|right|up|down|clockwise|counterclockwise|home|fit, degrees?: 0..180 (how far left|right|up|down turn or clockwise|counterclockwise roll; default 90); or motion: pan|orbit|zoom, delta?: [dx,dy] (pixels, each ±10000), free_orbit?: bool (orbit through poles, default false), viewport?: [width,height] (1..1000000, required for pan or pivot), pivot?: [x,y,z], factor?: 0.05..20 (required for zoom), anchor?: [x,y,z] → camera, fit, continuous?"),
 CommandSpec::new("view.normal_to", "Normal to Selection", normal_to)
         .icon("camera")
         .noundo()
@@ -136,13 +136,15 @@ fn navigate(_s: &mut Session, p: &Value) -> Result<Value> {
                 .ok_or_else(|| bad(cmd, "degrees must be a number above 0 and at most 180"))?,
         };
         let turn = |toward: solidcraft_geom::Vec3| cam.looking_from(b * cos + toward * sin);
+        // Rolls are a quarter turn too, or `degrees` (the number pad's 15° rolls); validated above.
+        let roll = p.get("degrees").and_then(Value::as_f64).map_or(FRAC_PI_2, f64::to_radians);
         match p.get("action").and_then(Value::as_str) {
             Some("left") => cam = turn(-r),
             Some("right") => cam = turn(r),
             Some("up") => cam = turn(u),
             Some("down") => cam = turn(-u),
-            Some("clockwise") => cam.roll = (cam.roll + FRAC_PI_2).rem_euclid(std::f64::consts::TAU),
-            Some("counterclockwise") => cam.roll = (cam.roll - FRAC_PI_2).rem_euclid(std::f64::consts::TAU),
+            Some("clockwise") => cam.roll = (cam.roll + roll).rem_euclid(std::f64::consts::TAU),
+            Some("counterclockwise") => cam.roll = (cam.roll - roll).rem_euclid(std::f64::consts::TAU),
             Some("home") => {
                 cam.set_view(StandardView::Iso);
                 fit = true;
@@ -513,6 +515,13 @@ mod tests {
         let to: Camera = serde_json::from_value(result["camera"].clone()).unwrap();
         assert_eq!(to.back(), cam.back());
         assert!((to.basis().0 - u).len() < 1e-9);
+        for (action, sign) in [("clockwise", 1.0), ("counterclockwise", -1.0)] {
+            let result = navigate(&mut s, &json!({"camera":cam,"action":action,"degrees":15})).unwrap();
+            let to: Camera = serde_json::from_value(result["camera"].clone()).unwrap();
+            let want = (cam.roll + sign * 15f64.to_radians()).rem_euclid(std::f64::consts::TAU);
+            assert!((to.roll - want).abs() < 1e-9, "{action} rolls 15°: {}", to.roll);
+            assert_eq!(to.back(), cam.back());
+        }
         for action in ["home", "fit"] {
             assert_eq!(navigate(&mut s, &json!({"camera":cam,"action":action})).unwrap()["fit"], true);
         }

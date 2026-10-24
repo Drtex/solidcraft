@@ -1183,6 +1183,8 @@
   "nav.free_orbit.label": "自由回転",
   "nav.fusion.help": "中ドラッグでパン、Shift+中ドラッグで回転、右ドラッグで回転。",
   "nav.inventor.help": "中ドラッグでパン、Shift+中ドラッグで回転、Ctrl+中ドラッグでズーム、右ドラッグで回転。",
+  "nav.numpad_views.help": "1、3、7：正面、右、上 (Ctrl：背面、左、下)。Shift+7：選択を正面に表示。2、4、6、8：視点を回転 (Ctrl：パン、Shift+4・Shift+6：ロール)。5：透視投影と平行投影の切替。9：反対側。0：ホーム。.（ピリオド）：選択にフィット。+ と −：ズーム。最上段の数字キーも同じ動作で、これらのキーに割り当てたショートカットより優先されます。",
+  "nav.numpad_views.label": "テンキーで視点操作 (Blender 方式)",
   "nav.openscad.help": "空きスペースで左ドラッグすると回転、Shift+左ドラッグで矩形選択、スケッチ ジオメトリはドラッグで編集。右または中ドラッグでパン、Shift+右または Shift+中ドラッグでズーム。",
   "nav.solidworks.help": "中ドラッグで回転、Ctrl+中ドラッグでパン、Shift+中ドラッグでズーム、右ドラッグで回転。",
   "nav.tinkercad.help": "右ドラッグで回転、中ドラッグまたは Shift+右ドラッグでパン。",

@@ -1183,6 +1183,8 @@
   "nav.free_orbit.label": "Free orbit",
   "nav.fusion.help": "Middle drag pans, Shift+middle orbits, right drag orbits",
   "nav.inventor.help": "Middle drag pans, Shift+middle orbits, Ctrl+middle zooms, right drag orbits",
+  "nav.numpad_views.help": "1, 3, 7: front, right, top (Ctrl: back, left, bottom); Shift+7: look at the selection; 2, 4, 6, 8: turn the view (Ctrl: pan; Shift+4, Shift+6: roll); 5: perspective or orthographic; 9: the opposite side; 0: home; . (period): fit the selection; + and −: zoom. The top-row digits work the same way, and these keys come before any shortcut bound to them.",
+  "nav.numpad_views.label": "Number pad views (Blender style)",
   "nav.openscad.help": "Left drag on empty space orbits, Shift+left drag box-selects, sketch geometry drags edit; right or middle drag pans, Shift+right or Shift+middle drag zooms",
   "nav.solidworks.help": "Middle drag orbits, Ctrl+middle pans, Shift+middle zooms, right drag orbits",
   "nav.tinkercad.help": "Right drag orbits, middle or Shift+right drag pans",

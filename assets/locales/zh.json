@@ -1183,6 +1183,8 @@
   "nav.free_orbit.label": "自由旋转",
   "nav.fusion.help": "中键拖动平移，Shift+中键拖动旋转，右键拖动旋转",
   "nav.inventor.help": "中键拖动平移，Shift+中键拖动旋转，Ctrl+中键拖动缩放，右键拖动旋转",
+  "nav.numpad_views.help": "1、3、7：前视、右视、俯视 (Ctrl：后视、左视、仰视)；Shift+7：正对所选对象；2、4、6、8：旋转视图 (Ctrl：平移；Shift+4、Shift+6：滚转)；5：切换透视或正交；9：反向视图；0：主视图；.（句点）：适合所选对象；+ 和 −：缩放。主键盘上方的数字键作用相同，并优先于绑定到这些键的快捷键。",
+  "nav.numpad_views.label": "数字键盘视图 (Blender 方式)",
   "nav.openscad.help": "在空白处左键拖动旋转，Shift+左键拖动框选，拖动草图几何可编辑；右键或中键拖动平移，Shift+右键或 Shift+中键拖动缩放",
   "nav.solidworks.help": "中键拖动旋转，Ctrl+中键拖动平移，Shift+中键拖动缩放，右键拖动旋转",
   "nav.tinkercad.help": "右键拖动旋转，中键或 Shift+右键拖动平移",

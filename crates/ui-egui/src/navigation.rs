@@ -265,7 +265,8 @@ fn view_keys_blocked(app: &SolveApp, ctx: &egui::Context) -> bool {
 
 /// View keys (#1541): the arrows turn the view 15° (with Shift a quarter turn, as the navigation
 /// cube's arrows), Ctrl+arrows pan it a tenth of the view, and Ctrl+8 looks straight at the
-/// selected face, plane or sketch. Held longer than a tap, an arrow keeps turning the view at a
+/// selected face, plane or sketch; with the number pad views on, the digits act as Blender's
+/// number pad ([`numpad_view_key`]). Held longer than a tap, an arrow keeps turning the view at a
 /// steady rate (`step_key_hold`); the operating system's key repeat does nothing. Not while a
 /// menu, the command box or a focused widget has the arrows. Returns whether the key was used.
 pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, mods: egui::Modifiers, repeat: bool) -> bool {
@@ -275,7 +276,12 @@ pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, 
     if mods.alt || menu_open {
         return false;
     }
-    if key == Key::Num8 && ctrl && !mods.shift {
+    let numpad = app.preferences.numpad_views;
+    if numpad && numpad_view_key(app, key, mods, ctrl, repeat) {
+        return true;
+    }
+    // With the number pad views on, Ctrl+8 pans like Ctrl+2/4/6 and Shift+7 looks at the selection.
+    if key == Key::Num8 && ctrl && !mods.shift && !numpad {
         crate::viewport::look_at_selection(app);
         return true;
     }
@@ -284,6 +290,11 @@ pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, 
         Key::ArrowRight => ("right", 1.0, 0.0),
         Key::ArrowUp => ("up", 0.0, -1.0),
         Key::ArrowDown => ("down", 0.0, 1.0),
+        // The number pad turns the view as the arrows do; Ctrl moves the view, not the model.
+        Key::Num4 if numpad => ("left", 1.0, 0.0),
+        Key::Num6 if numpad => ("right", -1.0, 0.0),
+        Key::Num8 if numpad => ("up", 0.0, 1.0),
+        Key::Num2 if numpad => ("down", 0.0, -1.0),
         _ => return false,
     };
     if ctrl {
@@ -299,6 +310,58 @@ pub(crate) fn view_key(app: &mut SolveApp, ctx: &egui::Context, key: egui::Key, 
         // retargeted rather than a second started.
         let from = app.cam_anim.map_or(app.cam, |a| a.to);
         let _ = app.run("view.navigate", json!({"camera": from, "action": action, "degrees": degrees}));
+    }
+    true
+}
+
+/// Number pad view keys, as in Blender (Preferences › Navigation › `numpad_views`). egui reports
+/// the number pad's digits as the top row's, so both rows act as the number pad: 1, 3 and 7 look
+/// from the front, right and top (Ctrl: the opposite side), Shift+7 looks at the selection,
+/// Shift+4 and Shift+6 roll the view 15°, 5 switches perspective and orthographic, 9 looks from
+/// the opposite side, 0 is the home view, `.` frames the selection, and + and − zoom. 2, 4, 6 and
+/// 8 turn and pan the view in [`view_key`], with the arrows. Returns whether the key was used.
+fn numpad_view_key(app: &mut SolveApp, key: egui::Key, mods: egui::Modifiers, ctrl: bool, repeat: bool) -> bool {
+    use egui::Key;
+    let side = |near: &'static str, far: &'static str| if ctrl { far } else { near };
+    let plain = !mods.shift;
+    match key {
+        Key::Num1 if plain => app.animate_view(side("front", "back")),
+        Key::Num3 if plain => app.animate_view(side("right", "left")),
+        Key::Num7 if plain => app.animate_view(side("top", "bottom")),
+        Key::Num7 if !ctrl && !repeat => crate::viewport::look_at_selection(app),
+        Key::Num4 | Key::Num6 if mods.shift && !ctrl => {
+            let action = if key == Key::Num4 { "counterclockwise" } else { "clockwise" };
+            let from = app.cam_anim.map_or(app.cam, |a| a.to);
+            let _ = app.run("view.navigate", json!({"camera": from, "action": action, "degrees": 15.0}));
+        }
+        Key::Num5 if plain && !ctrl => {
+            if !repeat {
+                app.ui.perspective = !app.ui.perspective;
+            }
+        }
+        Key::Num9 if plain && !ctrl => {
+            if !repeat {
+                let from = app.cam_anim.map_or(app.cam, |a| a.to);
+                let _ = app.run("view.navigate", json!({"camera": from, "action": "left", "degrees": 180.0}));
+            }
+        }
+        Key::Num0 if plain && !ctrl => {
+            if !repeat {
+                app.animate_view("home");
+            }
+        }
+        Key::Period if plain && !ctrl => {
+            if !repeat {
+                app.animate_view("fit");
+            }
+        }
+        Key::Plus | Key::Equals | Key::Minus if !ctrl => {
+            if let Some(rect) = app.viewport.rect {
+                let factor = if key == Key::Minus { 1.25 } else { 0.8 };
+                camera_motion(app, rect, json!({"motion": "zoom", "factor": factor}));
+            }
+        }
+        _ => return false,
     }
     true
 }
@@ -1429,6 +1492,83 @@ mod view_key_tests {
             }
         }
         assert!(crate::keymap::RESERVED.contains(&crate::keymap::key_name(egui::Key::Num8, egui::Modifiers::COMMAND).as_str()));
+    }
+
+    /// With the number pad views on, the digits choose, turn, pan, roll and zoom the view as in
+    /// Blender; off (the default), they leave the camera alone.
+    #[test]
+    fn number_pad_views_follow_the_preference() {
+        use solidcraft_engine::render::{Camera, StandardView};
+        let mut h = Harness::new();
+        h.app.preferences.look_at_anim = false;
+        h.app.run("solid.box", json!({"length": 10, "width": 10, "height": 10})).unwrap();
+        h.frames(3);
+        let iso = h.app.cam;
+        h.step(&json!({"key": "1"})).unwrap();
+        h.frames(3);
+        assert_eq!((h.app.cam.yaw, h.app.cam.pitch), (iso.yaw, iso.pitch), "off by default");
+
+        h.app.preferences.numpad_views = true;
+        let view = |v: StandardView| {
+            let mut c = Camera::default();
+            c.set_view(v);
+            (c.yaw, c.pitch)
+        };
+        let close = |a: (f64, f64), b: (f64, f64)| (a.0 - b.0).abs() < 1e-6 && (a.1 - b.1).abs() < 1e-6;
+        for (key, ctrl, want) in [
+            ("1", false, StandardView::Front),
+            ("1", true, StandardView::Back),
+            ("3", false, StandardView::Right),
+            ("3", true, StandardView::Left),
+            ("7", false, StandardView::Top),
+            ("7", true, StandardView::Bottom),
+        ] {
+            h.step(&json!({"key": key, "cmd": ctrl})).unwrap();
+            h.frames(3);
+            assert!(close((h.app.cam.yaw, h.app.cam.pitch), view(want)), "{key} ctrl={ctrl}: {want:?}");
+        }
+
+        h.step(&json!({"key": "1"})).unwrap();
+        h.frames(3);
+        let (yaw, pitch) = turned(&mut h, json!({"key": "4"}));
+        assert!((yaw.abs() - 15f64.to_radians()).abs() < 1e-6 && pitch.abs() < 1e-6, "4 turns 15°: {yaw} {pitch}");
+        let (_, pitch) = turned(&mut h, json!({"key": "8"}));
+        assert!((pitch.abs() - 15f64.to_radians()).abs() < 1e-6, "8 turns 15° over: {pitch}");
+
+        let (target, angles) = (h.app.cam.target, (h.app.cam.yaw, h.app.cam.pitch));
+        h.step(&json!({"key": "8", "cmd": true})).unwrap();
+        h.frames(2);
+        assert_ne!(h.app.cam.target, target, "Ctrl+8 pans");
+        assert_eq!((h.app.cam.yaw, h.app.cam.pitch), angles, "and does not turn");
+
+        let roll = h.app.cam.roll;
+        h.step(&json!({"key": "6", "shift": true})).unwrap();
+        h.frames(3);
+        assert!((h.app.cam.roll - roll).abs() > 1e-3, "Shift+6 rolls the view");
+
+        let perspective = h.app.ui.perspective;
+        h.step(&json!({"key": "5"})).unwrap();
+        h.frames(1);
+        assert_ne!(h.app.ui.perspective, perspective, "5 switches the projection");
+
+        let distance = h.app.cam.distance;
+        h.step(&json!({"key": "Plus"})).unwrap();
+        h.frames(2);
+        assert!(h.app.cam.distance < distance, "+ zooms in");
+        let distance = h.app.cam.distance;
+        h.step(&json!({"key": "Minus"})).unwrap();
+        h.frames(2);
+        assert!(h.app.cam.distance > distance, "− zooms out");
+
+        h.step(&json!({"key": "7"})).unwrap();
+        h.frames(3);
+        h.step(&json!({"key": "9"})).unwrap();
+        h.frames(3);
+        assert!((h.app.cam.pitch - view(StandardView::Bottom).1).abs() < 1e-3, "9 turns the top view to the bottom: {}", h.app.cam.pitch);
+
+        h.step(&json!({"key": "0"})).unwrap();
+        h.frames(3);
+        assert!(close((h.app.cam.yaw, h.app.cam.pitch), view(StandardView::Iso)), "0 is the home view");
     }
 
     fn arrow(pressed: bool, repeat: bool) -> egui::Event {

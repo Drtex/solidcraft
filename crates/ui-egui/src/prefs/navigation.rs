@@ -72,6 +72,11 @@ pub(super) fn show(app: &mut SolveApp, ui: &mut egui::Ui, t: &Tokens) {
         if app.preferences.free_orbit {
             ui_kit::text(ui, crate::i18n::tr("nav.free_orbit.help"), ui_kit::Text::Hint("free_orbit"));
         }
+        let numpad_views = setting::numpad_views(app, ui);
+        crate::scenario::publish_target("prefs:numpad_views", numpad_views.rect);
+        if app.preferences.numpad_views {
+            ui_kit::text(ui, crate::i18n::tr("nav.numpad_views.help"), ui_kit::Text::Hint("numpad_views"));
+        }
         let help = if app.preferences.nav == TOUCHPAD_NAV {
             app.tr("nav.touchpad.help").to_owned()
         } else if !app.preferences.free_orbit && app.preferences.nav != OPENSCAD_NAV {

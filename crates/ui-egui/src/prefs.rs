@@ -453,6 +453,9 @@ preference_settings! {
     /// Opt in to rotation through both poles with roll, without the Shift axis-snap spring.
     /// Independent of mouse bindings; false also preserves existing saved presets' behavior.
     free_orbit: bool = false, PAGE_NAVIGATION => check_tr("nav.free_orbit.label");
+    /// The digit keys (number pad or top row) choose and turn the view, as in Blender
+    /// (`navigation::numpad_view_key`). Off by default: the digits stay free for shortcuts.
+    numpad_views: bool = false, PAGE_NAVIGATION => check_tr("nav.numpad_views.label");
     /// View orientation widget: original signed axes (default) or compact cube.
     navigator_style: NavigatorStyle = NavigatorStyle::default(), PAGE_NAVIGATION;
     /// Show the radial ring and enable hold/flick gestures for viewport context menus.
