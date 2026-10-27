@@ -666,7 +666,6 @@
   "appearance.roughness": "חספוס",
   "appearance.surface_response": "תגובת המשטח",
   "browser.body_name": "גוף{number}",
-  "browser.calibrate_title": "כיול: {name}",
   "browser.capture_many": "{count} רכיבים הוזזו, אך המיקומים שלהם לא נלכדו.",
   "browser.capture_note": "לכידה שומרת את המיקום החדש; החזרה מחזירה את המיקום הקודם.",
   "browser.capture_one": "רכיב הוזז, אך המיקום שלו לא נלכד.",

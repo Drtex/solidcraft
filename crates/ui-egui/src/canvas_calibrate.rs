@@ -120,29 +120,13 @@ pub fn show(app: &mut SolveApp, ui: &mut egui::Ui, painter: &egui::Painter, proj
     }
     let Some(mid) = a.zip(b).map(|(a, b)| a.lerp(b, 0.5)) else { return };
     let id = egui::Id::new(BOX_ID);
-    let mut enter = false;
-    crate::ui_kit::Container::new(ui.ctx(), crate::ui_kit::Surface::Popup)
-        .area(egui::Id::new("sc_calibrate_area"))
-        .fixed_pos(mid + egui::vec2(8.0, 8.0))
-        .order(egui::Order::Foreground)
-        .show(ui.ctx(), |ui| {
-            egui::Frame::popup(ui.style()).inner_margin(egui::Margin::symmetric(6, 3)).show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(tr_label("Distance")).color(t.text_dim).size(t.font_small));
-                    let r = ui.add(egui::TextEdit::singleline(&mut cal.distance).id(id).desired_width(80.0));
-                    enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                    // The keyboard comes here, all of the value selected, unless another field has it.
-                    if !enter && ui.ctx().memory(|m| m.focused().is_none()) {
-                        r.request_focus();
-                        let n = cal.distance.chars().count();
-                        let mut st = egui::text_edit::TextEditState::load(ui.ctx(), id).unwrap_or_default();
-                        st.cursor
-                            .set_char_range(Some(egui::text_selection::CCursorRange::two(egui::text::CCursor::new(0), egui::text::CCursor::new(n))));
-                        st.store(ui.ctx(), id);
-                    }
-                });
-            });
-        });
+    // Enter in the box: it had the keyboard, and the key ends its edit this frame.
+    let enter = ui.ctx().memory(|m| m.has_focus(id)) && ui.input(|i| i.key_pressed(egui::Key::Enter));
+    // The keyboard comes here, all of the value selected, unless another field has it.
+    let take = !enter && ui.ctx().memory(|m| m.focused().is_none());
+    let ids = (egui::Id::new("sc_calibrate_area"), id);
+    let at = (mid + egui::vec2(8.0, 8.0), egui::Align2::LEFT_TOP);
+    crate::canvas::value_box_in(ui, ids, "Distance", &mut cal.distance, at, take, false, crate::canvas::box_place(app, proj));
     app.tree.calibration = Some(cal);
     if enter {
         apply(app);

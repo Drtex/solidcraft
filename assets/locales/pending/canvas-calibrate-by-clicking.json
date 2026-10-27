@@ -1,0 +1,38 @@
+{
+  "en": {
+    "Calibrate: click point A on the image": "Calibrate: click point A on the image",
+    "Calibrate: click point B on the image": "Calibrate: click point B on the image",
+    "Calibrate: show the canvas first": "Calibrate: show the canvas first",
+    "Calibrate: type the real distance from A to B and press Enter": "Calibrate: type the real distance from A to B and press Enter"
+  },
+  "ar": {
+    "Calibrate: click point A on the image": "المعايرة: انقر النقطة A على الصورة",
+    "Calibrate: click point B on the image": "المعايرة: انقر النقطة B على الصورة",
+    "Calibrate: show the canvas first": "المعايرة: أظهر اللوحة أولاً",
+    "Calibrate: type the real distance from A to B and press Enter": "المعايرة: اكتب المسافة الحقيقية من A إلى B واضغط Enter"
+  },
+  "he": {
+    "Calibrate: click point A on the image": "כיול: לחץ על נקודה A בתמונה",
+    "Calibrate: click point B on the image": "כיול: לחץ על נקודה B בתמונה",
+    "Calibrate: show the canvas first": "כיול: הצג תחילה את הקנבס",
+    "Calibrate: type the real distance from A to B and press Enter": "כיול: הקלד את המרחק האמיתי מ-A ל-B ולחץ Enter"
+  },
+  "ja": {
+    "Calibrate: click point A on the image": "校正: 画像上の点 A をクリック",
+    "Calibrate: click point B on the image": "校正: 画像上の点 B をクリック",
+    "Calibrate: show the canvas first": "校正: 先にキャンバスを表示してください",
+    "Calibrate: type the real distance from A to B and press Enter": "校正: A から B までの実際の距離を入力して Enter キーを押します"
+  },
+  "vi": {
+    "Calibrate: click point A on the image": "Hiệu chỉnh: nhấp điểm A trên ảnh",
+    "Calibrate: click point B on the image": "Hiệu chỉnh: nhấp điểm B trên ảnh",
+    "Calibrate: show the canvas first": "Hiệu chỉnh: hãy hiện canvas trước",
+    "Calibrate: type the real distance from A to B and press Enter": "Hiệu chỉnh: nhập khoảng cách thực từ A đến B rồi nhấn Enter"
+  },
+  "zh": {
+    "Calibrate: click point A on the image": "校准：单击图像上的点 A",
+    "Calibrate: click point B on the image": "校准：单击图像上的点 B",
+    "Calibrate: show the canvas first": "校准：请先显示画布",
+    "Calibrate: type the real distance from A to B and press Enter": "校准：输入 A 到 B 的实际距离并按 Enter"
+  }
+}

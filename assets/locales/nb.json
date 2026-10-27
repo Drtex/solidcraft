@@ -572,7 +572,6 @@
   "appearance.roughness": "Ruhet",
   "appearance.surface_response": "Overflatens lysrespons",
   "browser.body_name": "Kropp{number}",
-  "browser.calibrate_title": "Kalibrer: {name}",
   "browser.capture_many": "{count} komponenter er flyttet, men de nye posisjonene er ikke registrert.",
   "browser.capture_note": "Registrer posisjon beholder den nye posisjonen. Tilbakestill gjenoppretter den forrige.",
   "browser.capture_one": "En komponent er flyttet, men den nye posisjonen er ikke registrert.",

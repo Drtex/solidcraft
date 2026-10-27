@@ -666,7 +666,6 @@
   "appearance.roughness": "الخشونة",
   "appearance.surface_response": "استجابة السطح",
   "browser.body_name": "جسم {number}",
-  "browser.calibrate_title": "معايرة: {name}",
   "browser.capture_many": "تم تحريك {count} مكوّنات دون تثبيت مواضعها.",
   "browser.capture_note": "التثبيت يحتفظ بالموضع الجديد، والإرجاع يعيده كما كان.",
   "browser.capture_one": "تم تحريك مكوّن دون تثبيت موضعه.",
