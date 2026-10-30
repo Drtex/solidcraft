@@ -5,6 +5,7 @@
 use egui::{Pos2, Stroke, vec2};
 use serde_json::{Value, json};
 use solidcraft_engine::doc::canvas::Canvas;
+use solidcraft_engine::doc::expr::Kind as ValueKind;
 use solidcraft_engine::geom::Vec2;
 
 use crate::SolveApp;
@@ -72,12 +73,17 @@ pub(crate) fn panel(app: &mut SolveApp, ctx: &egui::Context) {
         }
     }
     if action == ui_kit::Action::Ok {
-        if app.run("canvas.calibrate", json!({ "canvas": c.id, "a": m.a, "b": m.b, "distance": m.distance })).is_ok() {
-            app.tree.canvas_panel = None;
-        }
+        apply(app, &m);
         return;
     }
     app.tree.canvas_panel = if closed || action == ui_kit::Action::Cancel { None } else { Some(m) };
+}
+
+/// Calibrate with the card's points and distance; the card closes when it took.
+fn apply(app: &mut SolveApp, m: &crate::browser::CanvasPanel) {
+    if app.run("canvas.calibrate", json!({ "canvas": m.canvas, "a": m.a, "b": m.b, "distance": m.distance })).is_ok() {
+        app.tree.canvas_panel = None;
+    }
 }
 
 /// A viewport click while Calibrate is open: set Point A or B on the image (#9108).
@@ -108,6 +114,12 @@ pub(crate) fn click(app: &mut SolveApp, proj: &Proj, screen: Pos2) -> bool {
     if panel.next == 1 {
         panel.b = point;
         panel.next = 2;
+        // The distance starts as the one measured on the image, for the real one to replace.
+        let measured = Vec2::new(panel.a[0], panel.a[1]).dist(local);
+        if measured > 1e-9 {
+            panel.distance = measured;
+        }
+        panel.distance_text = None;
     } else {
         panel.a = point;
         panel.next = 1;
@@ -127,9 +139,10 @@ fn calibrate_hint(next: u8) -> &'static str {
     }
 }
 
-/// Markers for the two calibration points on the image.
-pub(crate) fn paint_marks(app: &SolveApp, painter: &egui::Painter, proj: &Proj) {
-    let Some(panel) = app.tree.canvas_panel.as_ref().filter(|p| p.calibrate) else {
+/// Markers for the two calibration points on the image. Once both are clicked, a line joins
+/// them with a Distance box at its middle, which edits the card's Distance.
+pub(crate) fn paint_marks(app: &mut SolveApp, ui: &mut egui::Ui, painter: &egui::Painter, proj: &Proj) {
+    let Some(panel) = app.tree.canvas_panel.clone().filter(|p| p.calibrate) else {
         return;
     };
     let doc = &app.session.doc;
@@ -141,8 +154,13 @@ pub(crate) fn paint_marks(app: &SolveApp, painter: &egui::Painter, proj: &Proj) 
         return;
     };
     let t = Tokens::get();
-    for (i, point) in [panel.a, panel.b].into_iter().enumerate() {
-        let Some(screen) = proj.to_screen(plane.to_world(Vec2::new(point[0], point[1]))) else {
+    let screens = [panel.a, panel.b].map(|p| proj.to_screen(plane.to_world(Vec2::new(p[0], p[1]))));
+    let line = if panel.next == 2 { screens[0].zip(screens[1]) } else { None };
+    if let Some((a, b)) = line {
+        painter.line_segment([a, b], Stroke::new(2.0, t.accent));
+    }
+    for (i, screen) in screens.into_iter().enumerate() {
+        let Some(screen) = screen else {
             continue;
         };
         let active = panel.next as usize == i;
@@ -158,6 +176,44 @@ pub(crate) fn paint_marks(app: &SolveApp, painter: &egui::Painter, proj: &Proj) 
             if active { t.accent } else { t.text },
         );
     }
+    if let Some((a, b)) = line {
+        distance_box(app, ui, proj, a.lerp(b, 0.5));
+    }
+}
+
+/// The Distance box over the line A–B. It shows the card's Distance and takes the keyboard
+/// (all of it selected) unless another field has it; what is typed there updates the card as
+/// it goes, and Enter calibrates, as the card's Calibrate does.
+fn distance_box(app: &mut SolveApp, ui: &mut egui::Ui, proj: &Proj, mid: Pos2) {
+    let Some(mut panel) = app.tree.canvas_panel.clone() else { return };
+    let id = egui::Id::new("sc_calibrate_value");
+    let focused = ui.ctx().memory(|m| m.has_focus(id));
+    // Taken here, so the card's Enter-for-Calibrate doesn't run it a second time.
+    let enter = focused && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));
+    let take = !focused && ui.ctx().memory(|m| m.focused().is_none());
+    let shown = crate::prefs::show_mm(app, panel.distance, 1);
+    let mut text = if focused { panel.distance_text.clone().unwrap_or_else(|| shown.clone()) } else { shown.clone() };
+    let ids = (egui::Id::new("sc_calibrate_area"), id);
+    let at = (mid + vec2(8.0, 8.0), egui::Align2::LEFT_TOP);
+    crate::canvas::value_box_in(ui, ids, "Distance", &mut text, at, take, false, crate::canvas::box_place(app, proj));
+    let typed = app.session.doc.eval(&text, ValueKind::Length).ok().filter(|d| d.is_finite() && *d > 0.0);
+    if focused || take {
+        // Only a change: the shown value is rounded, and must not round the card's Distance.
+        if let Some(d) = typed.filter(|_| text != shown) {
+            panel.distance = d.clamp(0.001, 1e6);
+        }
+        panel.distance_text = Some(text.clone());
+    } else {
+        panel.distance_text = None;
+    }
+    if enter {
+        if typed.is_none() {
+            app.tree.canvas_panel = Some(panel);
+            return app.set_status(format!("{}: {text}", crate::i18n::tr_label("Distance")), true);
+        }
+        return apply(app, &panel);
+    }
+    app.tree.canvas_panel = Some(panel);
 }
 
 fn on_image(c: &Canvas, p: Vec2) -> bool {
@@ -258,5 +314,45 @@ mod tests {
             assert!(!super::click(&mut h.app, &proj, sm));
             assert_eq!(h.app.tree.canvas_panel.as_ref().unwrap().a, before);
         }
+    }
+
+    /// Once both points are clicked, a line joins them with a Distance box in the view: it holds
+    /// the measured distance, as the card does, and the real one typed there with Enter
+    /// calibrates, as one undo step.
+    #[test]
+    fn calibrate_takes_the_distance_typed_in_the_view() {
+        let mut h = crate::scenario::Harness::new();
+        h.app.home.open = false;
+        let id = canvas(&mut h);
+        h.call("ui.view", json!({"view": "top"}));
+        h.frames(3);
+        let items = crate::context_menu::items(&h.app, &crate::context_menu::Target::Canvas { id });
+        let item = items.iter().find(|i| i.id == "ui.calibrateCanvas").unwrap().clone();
+        crate::context_menu::run_item(&mut h.app, &item, egui::pos2(0.0, 0.0));
+        h.frames(3);
+        let c = h.app.session.doc.canvases[0].clone();
+        let plane = h.app.session.doc.canvas_plane(&h.app.session.doc.param_values().0, &c).unwrap();
+        for x in [-20.0, 20.0] {
+            let p = plane.to_world(solidcraft_engine::geom::Vec2::new(c.center.x + x, c.center.y));
+            let at = crate::viewport::projection(&h.app, h.app.viewport.rect.unwrap()).to_screen(p).unwrap();
+            h.call("ui.click", json!({"x": at.x, "y": at.y}));
+            h.frames(2);
+        }
+        let panel = h.app.tree.canvas_panel.clone().expect("still calibrating");
+        assert_eq!(panel.next, 2);
+        assert!((panel.distance - 40.0).abs() < 1e-3, "the card holds the measured distance: {}", panel.distance);
+        h.frames(2);
+        let shown = h.app.tree.canvas_panel.as_ref().unwrap().distance_text.clone();
+        assert!(shown.as_deref().is_some_and(|t| t.starts_with("40")), "the box in the view has the keyboard and the distance: {shown:?}");
+        let undo = h.app.session.undo.len();
+        h.step(&json!({"text": "80"})).unwrap();
+        h.frames(1);
+        assert!((h.app.tree.canvas_panel.as_ref().unwrap().distance - 80.0).abs() < 1e-9, "typing in the view updates the card");
+        h.step(&json!({"key": "Enter"})).unwrap();
+        h.frames(2);
+        assert!(h.app.tree.canvas_panel.is_none(), "Enter calibrates and closes the card: {:?}", h.app.status);
+        let width = h.app.session.doc.canvases[0].width;
+        assert!((width - 160.0).abs() < 1e-6, "40 mm on the image are really 80: {width}");
+        assert_eq!(h.app.session.undo.len(), undo + 1, "one undo step, not two");
     }
 }
