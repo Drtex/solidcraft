@@ -31,11 +31,7 @@ pub(crate) fn panel(app: &mut SolveApp, ctx: &egui::Context) {
         .actions(ok, cancel, None)
         .show(ctx, true, |ui| {
             if calibrate {
-                ui_kit::text(
-                    ui,
-                    crate::i18n::tr(if m.next == 0 { "browser.calibrate_click_a" } else { "browser.calibrate_click_b" }),
-                    ui_kit::Text::Note("calibrate_hint"),
-                );
+                ui_kit::text(ui, crate::i18n::tr(calibrate_hint(m.next)), ui_kit::Text::Note("calibrate_hint"));
                 for (label, p) in [("Point A", &mut m.a), ("Point B", &mut m.b)] {
                     ui_kit::row(ui, crate::i18n::tr_label(label), |ui| {
                         let [x, y] = p;
@@ -109,17 +105,26 @@ pub(crate) fn click(app: &mut SolveApp, proj: &Proj, screen: Pos2) -> bool {
         return false;
     }
     let point = [local.x, local.y];
-    if panel.next == 0 {
+    if panel.next == 1 {
+        panel.b = point;
+        panel.next = 2;
+    } else {
         panel.a = point;
         panel.next = 1;
-        app.set_status(crate::i18n::tr("browser.calibrate_click_b"), false);
-    } else {
-        panel.b = point;
-        panel.next = 0;
-        app.set_status(crate::i18n::tr("browser.calibrate_click_a"), false);
     }
+    app.set_status(crate::i18n::tr(calibrate_hint(panel.next)), false);
     app.tree.canvas_panel = Some(panel);
     true
+}
+
+/// What Calibrate asks for next, in the card and the status line: Point A, Point B, then the
+/// real distance between them.
+fn calibrate_hint(next: u8) -> &'static str {
+    match next {
+        0 => "browser.calibrate_click_a",
+        1 => "browser.calibrate_click_b",
+        _ => "browser.calibrate_type_distance",
+    }
 }
 
 /// Markers for the two calibration points on the image.
@@ -243,8 +248,10 @@ mod tests {
         assert!((panel.a[0] - ax).abs() < 0.5, "{:?}", panel.a);
         assert!(super::click(&mut h.app, &proj, sb), "second click sets B");
         let panel = h.app.tree.canvas_panel.as_ref().unwrap();
-        assert_eq!(panel.next, 0);
+        assert_eq!(panel.next, 2, "both points picked: the distance is next");
         assert!((panel.b[0] - bx).abs() < 0.5, "{:?}", panel.b);
+        let status = h.app.status.as_ref().map(|s| s.0.clone()).unwrap_or_default();
+        assert_eq!(status, crate::i18n::tr("browser.calibrate_type_distance"), "the status line asks for the distance");
         let before = panel.a;
         let miss = plane.to_world(solidcraft_engine::geom::Vec2::new(c.center.x + 500.0, c.center.y));
         if let Some(sm) = proj.to_screen(miss) {

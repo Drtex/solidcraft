@@ -2098,7 +2098,8 @@ pub struct CanvasPanel {
     pub a: [f64; 2],
     pub b: [f64; 2],
     pub distance: f64,
-    /// Next viewport click sets Point A (`0`) or Point B (`1`) (#9108).
+    /// Next viewport click sets Point A (`0`) or Point B (`1`) (#9108). `2`: both are picked
+    /// and the distance is next; another click starts over at Point A.
     pub next: u8,
 }
 
